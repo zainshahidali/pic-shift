@@ -1,12 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { Settings, Image as ImageIcon, Download, Upload, Trash2, CheckCircle, Zap, Loader2, X, DownloadCloud, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { convertToWebP, formatSize } from './utils/imageProcessor';
+import { compressImage, formatSize } from './utils/imageProcessor';
 import JSZip from 'jszip';
 
 function App() {
   const [items, setItems] = useState([]);
   const [quality, setQuality] = useState(100);
+  const [maxWidth, setMaxWidth] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -53,7 +54,21 @@ function App() {
   const convertFile = async (item) => {
     setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'converting' } : i));
     try {
-      const converted = await convertToWebP(item.originalFile, quality);
+      const options = {
+        fileType: 'image/webp',
+        initialQuality: quality / 100,
+        alwaysKeepResolution: maxWidth === 0,
+        useWebWorker: true,
+      };
+      if (maxWidth > 0) {
+        options.maxWidthOrHeight = maxWidth;
+      }
+      
+      const compressedBlob = await compressImage(item.originalFile, options);
+      // Ensure the generated file has the correct .webp extension
+      const newName = item.originalFile.name.replace(/\.[^/.]+$/, "") + ".webp";
+      const converted = new File([compressedBlob], newName, { type: 'image/webp' });
+
       setItems(prev => prev.map(i => i.id === item.id ? {
         ...i,
         status: 'completed',
@@ -138,6 +153,26 @@ function App() {
               className="accent-emerald-500 w-24 h-1.5 rounded-lg appearance-none bg-slate-800 cursor-pointer hidden md:block"
             />
           </div>
+          
+          <div className="hidden sm:flex items-center gap-4 glass px-6 py-3">
+            <ImageIcon size={18} className="text-slate-400" />
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Max Size</span>
+              <select 
+                value={maxWidth} 
+                onChange={(e) => setMaxWidth(Number(e.target.value))}
+                className="bg-transparent text-sm font-semibold text-emerald-300 outline-none cursor-pointer appearance-none"
+              >
+                <option value={0} className="bg-slate-800">Original Size</option>
+                <option value={3840} className="bg-slate-800">4K (3840px)</option>
+                <option value={1920} className="bg-slate-800">FHD (1920px)</option>
+                <option value={1280} className="bg-slate-800">HD (1280px)</option>
+                <option value={800} className="bg-slate-800">Web (800px)</option>
+                <option value={400} className="bg-slate-800">Thumbnail (400px)</option>
+              </select>
+            </div>
+          </div>
+
           {items.length > 0 && (
             <button onClick={clearAll} className="p-3 sm:px-4 sm:py-3 glass text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all flex items-center gap-2 text-sm font-bold">
               <Trash2 size={18} /> <span className="hidden sm:inline">Clear All</span>
