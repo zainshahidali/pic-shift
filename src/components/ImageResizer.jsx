@@ -57,6 +57,24 @@ export default function ImageResizer() {
   const removeFile = (id) => setItems(prev => prev.filter(item => item.id !== id));
   const clearAll = () => setItems([]);
 
+  const handleWidthChange = (e) => {
+    const w = parseInt(e.target.value) || 0;
+    setTargetWidth(w);
+    if (lockAspect && items.length > 0) {
+      const ratio = items[0].originalDims.height / items[0].originalDims.width;
+      setTargetHeight(Math.round(w * ratio));
+    }
+  };
+
+  const handleHeightChange = (e) => {
+    const h = parseInt(e.target.value) || 0;
+    setTargetHeight(h);
+    if (lockAspect && items.length > 0) {
+      const ratio = items[0].originalDims.width / items[0].originalDims.height;
+      setTargetWidth(Math.round(h * ratio));
+    }
+  };
+
   const applyPreset = (p) => {
     setTargetWidth(p.w);
     setTargetHeight(p.h);
@@ -126,7 +144,7 @@ export default function ImageResizer() {
           <Maximize size={16} className="text-slate-400" />
           <div className="flex flex-col">
             <label>Width (px)</label>
-            <input type="number" value={targetWidth} onChange={(e) => setTargetWidth(Number(e.target.value))} min="1" max="10000" />
+            <input type="number" value={targetWidth} onChange={handleWidthChange} min="1" max="10000" />
           </div>
         </div>
 
@@ -142,7 +160,7 @@ export default function ImageResizer() {
           <Maximize size={16} className="text-slate-400" />
           <div className="flex flex-col">
             <label>Height (px)</label>
-            <input type="number" value={targetHeight} onChange={(e) => setTargetHeight(Number(e.target.value))} min="1" max="10000" />
+            <input type="number" value={targetHeight} onChange={handleHeightChange} min="1" max="10000" />
           </div>
         </div>
 
