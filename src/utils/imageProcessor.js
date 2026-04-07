@@ -1,145 +1,180 @@
 /**
  * Professional-grade image processor.
- * Uses multi-step downscaling to prevent pixelation (same technique as Cloudinary/Photoshop).
- * All processing happens client-side via Canvas API — no server uploads.
+ *
+ * Quality strategy:
+ * 1. Uses createImageBitmap with resizeQuality:'high' (native Lanczos resampling)
+ *    as primary resize method — same algorithm as Photoshop/Cloudinary.
+ * 2. Falls back to multi-step canvas downscaling if createImageBitmap resize
+ *    is not supported.
+ * 3. For format conversion WITHOUT resizing, draws at original dimensions
+ *    to avoid any unnecessary resampling artifacts.
+ * 4. All lossy encoding uses the user's chosen quality (default 1.0 for resize).
+ *
+ * All processing is client-side via Canvas API — nothing is uploaded.
  */
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 /**
- * Load an image File/Blob into an HTMLImageElement.
+ * Load a File into an HTMLImageElement (fully decoded).
  */
-const loadImage = (file) => {
-    return new Promise((resolve, reject) => {
+const loadImage = (file) =>
+    new Promise((resolve, reject) => {
         const url = URL.createObjectURL(file);
         const img = new Image();
-        img.onload = () => {
-            URL.revokeObjectURL(url);
-            resolve(img);
-        };
-        img.onerror = () => {
-            URL.revokeObjectURL(url);
-            reject(new Error('Image loading failed'));
-        };
+        img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image loading failed')); };
         img.src = url;
     });
-};
 
 /**
- * Multi-step downscale: halve dimensions repeatedly, then do a final resize.
- * This avoids the heavy aliasing/pixelation that a single large drawImage causes.
- * Equivalent to Lanczos-style resampling in professional tools.
- *
- * @param {HTMLImageElement} img   – source image
- * @param {number} targetW        – desired width
- * @param {number} targetH        – desired height
- * @returns {HTMLCanvasElement}    – canvas with the final resized image
+ * Try to resize using createImageBitmap (Lanczos / high-quality native resampling).
+ * Returns a canvas, or null if the browser doesn't support resize options.
  */
-const highQualityResize = (img, targetW, targetH) => {
-    let currentW = img.naturalWidth || img.width;
-    let currentH = img.naturalHeight || img.height;
+const nativeHighQualityResize = async (file, targetW, targetH) => {
+    if (typeof createImageBitmap === 'undefined') return null;
 
-    // If upscaling or same size, just draw directly with smoothing
-    if (targetW >= currentW && targetH >= currentH) {
+    try {
+        const bitmap = await createImageBitmap(file, {
+            resizeWidth: targetW,
+            resizeHeight: targetH,
+            resizeQuality: 'high',          // Lanczos-equivalent
+            premultiplyAlpha: 'none',       // preserve alpha precision
+            colorSpaceConversion: 'none',   // don't mangle colours
+        });
+
         const canvas = document.createElement('canvas');
         canvas.width = targetW;
         canvas.height = targetH;
         const ctx = canvas.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        return canvas;
+    } catch {
+        // Browser doesn't support resize options — fall back
+        return null;
+    }
+};
+
+/**
+ * Multi-step canvas downscale (fallback).
+ * Halves dimensions repeatedly then does a final draw — avoids aliasing.
+ */
+const multiStepResize = (img, targetW, targetH) => {
+    let curW = img.naturalWidth || img.width;
+    let curH = img.naturalHeight || img.height;
+
+    // Upscale or same size — single draw is fine
+    if (targetW >= curW && targetH >= curH) {
+        const c = document.createElement('canvas');
+        c.width = targetW; c.height = targetH;
+        const ctx = c.getContext('2d');
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, targetW, targetH);
-        return canvas;
+        return c;
     }
 
-    // Step-down: halve until we're within 2× of the target, then do a final draw.
-    // This dramatically improves downscale quality.
-    let srcCanvas = document.createElement('canvas');
-    srcCanvas.width = currentW;
-    srcCanvas.height = currentH;
-    let srcCtx = srcCanvas.getContext('2d');
-    srcCtx.imageSmoothingEnabled = true;
-    srcCtx.imageSmoothingQuality = 'high';
-    srcCtx.drawImage(img, 0, 0, currentW, currentH);
+    // Draw source at full size first
+    let src = document.createElement('canvas');
+    src.width = curW; src.height = curH;
+    let sctx = src.getContext('2d');
+    sctx.drawImage(img, 0, 0, curW, curH);
 
-    // Keep halving while the source is more than 2× the target
-    while (currentW / 2 > targetW && currentH / 2 > targetH) {
-        const halfW = Math.max(Math.round(currentW / 2), targetW);
-        const halfH = Math.max(Math.round(currentH / 2), targetH);
-
-        const stepCanvas = document.createElement('canvas');
-        stepCanvas.width = halfW;
-        stepCanvas.height = halfH;
-        const stepCtx = stepCanvas.getContext('2d');
-        stepCtx.imageSmoothingEnabled = true;
-        stepCtx.imageSmoothingQuality = 'high';
-        stepCtx.drawImage(srcCanvas, 0, 0, halfW, halfH);
-
-        srcCanvas = stepCanvas;
-        currentW = halfW;
-        currentH = halfH;
+    // Halve while more than 2× the target
+    while (curW / 2 > targetW && curH / 2 > targetH) {
+        const hw = Math.max(Math.round(curW / 2), targetW);
+        const hh = Math.max(Math.round(curH / 2), targetH);
+        const step = document.createElement('canvas');
+        step.width = hw; step.height = hh;
+        const ctx = step.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(src, 0, 0, hw, hh);
+        src = step; curW = hw; curH = hh;
     }
 
-    // Final step to exact target dimensions
-    const finalCanvas = document.createElement('canvas');
-    finalCanvas.width = targetW;
-    finalCanvas.height = targetH;
-    const finalCtx = finalCanvas.getContext('2d');
-    finalCtx.imageSmoothingEnabled = true;
-    finalCtx.imageSmoothingQuality = 'high';
-    finalCtx.drawImage(srcCanvas, 0, 0, targetW, targetH);
-
-    return finalCanvas;
+    // Final step
+    const fin = document.createElement('canvas');
+    fin.width = targetW; fin.height = targetH;
+    const fctx = fin.getContext('2d');
+    fctx.imageSmoothingEnabled = true;
+    fctx.imageSmoothingQuality = 'high';
+    fctx.drawImage(src, 0, 0, targetW, targetH);
+    return fin;
 };
 
 /**
- * Convert a canvas to a File with the given MIME type and quality.
+ * High-quality resize: tries native createImageBitmap first, then falls back.
+ * @returns {Promise<HTMLCanvasElement>}
  */
-const canvasToFile = (canvas, fileName, mimeType, quality) => {
-    return new Promise((resolve, reject) => {
-        // quality param: 0-1 for lossy formats, ignored for lossless (PNG)
-        const qualityArg = (mimeType === 'image/jpeg' || mimeType === 'image/webp')
-            ? quality
-            : undefined;
+const highQualityResize = async (file, img, targetW, targetH) => {
+    // 1. Try native Lanczos (best quality — used by Chrome, Edge, Firefox)
+    const native = await nativeHighQualityResize(file, targetW, targetH);
+    if (native) return native;
 
+    // 2. Fallback: multi-step canvas downscale
+    return multiStepResize(img, targetW, targetH);
+};
+
+/**
+ * Draw an image to canvas at its ORIGINAL size — no resampling, pixel-perfect.
+ * Used for format conversion when dimensions aren't changing.
+ */
+const drawOriginalSize = (img) => {
+    const w = img.naturalWidth;
+    const h = img.naturalHeight;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    // No smoothing needed — 1:1 pixel mapping
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvas;
+};
+
+/**
+ * Export a canvas to a File blob.
+ * @param {HTMLCanvasElement} canvas
+ * @param {string} fileName
+ * @param {string} mimeType
+ * @param {number} quality  0–1 for JPEG/WebP, ignored for PNG/BMP
+ */
+const canvasToFile = (canvas, fileName, mimeType, quality) =>
+    new Promise((resolve, reject) => {
+        const q = (mimeType === 'image/jpeg' || mimeType === 'image/webp') ? quality : undefined;
         canvas.toBlob(
-            (blob) => {
-                if (blob) {
-                    resolve(new File([blob], fileName, { type: mimeType }));
-                } else {
-                    reject(new Error('Canvas blob conversion failed'));
-                }
-            },
+            (blob) => blob
+                ? resolve(new File([blob], fileName, { type: mimeType }))
+                : reject(new Error('Canvas blob conversion failed')),
             mimeType,
-            qualityArg
+            q
         );
     });
-};
 
-/**
- * Get file extension from MIME type.
- */
-const getExtension = (mimeType) => {
-    const map = {
-        'image/png': '.png',
-        'image/jpeg': '.jpg',
-        'image/webp': '.webp',
-        'image/bmp': '.bmp',
-        'image/gif': '.gif',
-    };
-    return map[mimeType] || '.png';
+const EXT_MAP = {
+    'image/png': '.png',
+    'image/jpeg': '.jpg',
+    'image/webp': '.webp',
+    'image/bmp': '.bmp',
+    'image/gif': '.gif',
 };
+const getExtension = (mime) => EXT_MAP[mime] || '.png';
 
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 /**
- * Convert an image to a specific format using high-quality canvas rendering.
- * Does NOT use browser-image-compression, so there's zero hidden quality loss.
+ * Convert an image to a target format.
  *
- * @param {File}   file          – source image file
- * @param {string} targetFormat  – MIME type: 'image/webp', 'image/jpeg', 'image/png', 'image/bmp'
- * @param {number} quality       – 1-100 (only affects JPEG/WebP)
- * @param {number} maxDimension  – max width or height (0 = keep original size)
+ * When dimensions stay the same (maxDimension = 0), the image is drawn 1:1
+ * so there's zero resampling — pixel values pass straight through.
+ * Quality loss only comes from the target format's encoder at the given quality.
+ *
+ * @param {File}   file          source image
+ * @param {string} targetFormat  e.g. 'image/webp'
+ * @param {number} quality       1–100 (only affects JPEG / WebP)
+ * @param {number} maxDimension  constrain longest edge (0 = original size)
  */
 export const convertImageFormat = async (file, targetFormat, quality = 100, maxDimension = 0) => {
     const img = await loadImage(file);
@@ -147,36 +182,31 @@ export const convertImageFormat = async (file, targetFormat, quality = 100, maxD
     let w = img.naturalWidth;
     let h = img.naturalHeight;
 
-    // Constrain to maxDimension if set
-    if (maxDimension > 0 && (w > maxDimension || h > maxDimension)) {
+    const needsResize = maxDimension > 0 && (w > maxDimension || h > maxDimension);
+
+    let canvas;
+    if (needsResize) {
         const ratio = Math.min(maxDimension / w, maxDimension / h);
         w = Math.round(w * ratio);
         h = Math.round(h * ratio);
+        canvas = await highQualityResize(file, img, w, h);
+    } else {
+        // No resize — draw 1:1, zero resampling
+        canvas = drawOriginalSize(img);
     }
 
-    // Use multi-step downscale for best quality
-    const canvas = highQualityResize(img, w, h);
-
-    const extMap = {
-        'image/webp': '.webp',
-        'image/jpeg': '.jpg',
-        'image/png': '.png',
-        'image/bmp': '.bmp',
-    };
-    const ext = extMap[targetFormat] || '.png';
+    const ext = EXT_MAP[targetFormat] || '.png';
     const newName = file.name.replace(/\.[^/.]+$/, '') + ext;
-
     return canvasToFile(canvas, newName, targetFormat, quality / 100);
 };
 
 /**
- * Resize an image to specific dimensions with professional-grade quality.
- * Uses multi-step downscaling to prevent pixelation.
+ * Resize an image to exact dimensions.
  *
- * @param {File}    file            – source image file
- * @param {number}  width           – target width in px
- * @param {number}  height          – target height in px
- * @param {boolean} maintainAspect  – if true, fit within width×height keeping ratio
+ * @param {File}    file
+ * @param {number}  width           target width  (px)
+ * @param {number}  height          target height (px)
+ * @param {boolean} maintainAspect  fit inside w×h keeping ratio
  */
 export const resizeImage = async (file, width, height, maintainAspect = true) => {
     const img = await loadImage(file);
@@ -190,48 +220,42 @@ export const resizeImage = async (file, width, height, maintainAspect = true) =>
         targetH = Math.round(img.naturalHeight * ratio);
     }
 
-    // Multi-step downscale
-    const canvas = highQualityResize(img, targetW, targetH);
+    const canvas = await highQualityResize(file, img, targetW, targetH);
 
-    // Preserve original format, max quality for output
     const outputType = file.type || 'image/png';
-    const qualityValue = 1.0; // Always max quality for resize — user controls size via dimensions
-    const newName = file.name.replace(/\.[^/.]+$/, '') + `_${targetW}x${targetH}` + getExtension(outputType);
+    const newName =
+        file.name.replace(/\.[^/.]+$/, '') +
+        `_${targetW}x${targetH}` +
+        getExtension(outputType);
 
-    return canvasToFile(canvas, newName, outputType, qualityValue);
+    // Max quality — user controls size via dimensions, not lossy compression
+    return canvasToFile(canvas, newName, outputType, 1.0);
 };
 
-/**
- * Read a file as a Data URL (base64 string).
- * Used for embedding images in PDF and Word.
- */
-export const imageToDataUrl = (file) => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
+
+// ─── Utilities (unchanged) ──────────────────────────────────────────────────
+
+/** Read file as base64 Data URL (for PDF / Word embedding). */
+export const imageToDataUrl = (file) =>
+    new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = reject;
+        r.readAsDataURL(file);
     });
-};
 
-/**
- * Read a file as an ArrayBuffer.
- * Used for the docx library's ImageRun.
- */
-export const imageToArrayBuffer = (file) => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsArrayBuffer(file);
+/** Read file as ArrayBuffer (for docx ImageRun). */
+export const imageToArrayBuffer = (file) =>
+    new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = reject;
+        r.readAsArrayBuffer(file);
     });
-};
 
-/**
- * Get the natural dimensions of an image file.
- */
-export const getImageDimensions = (file) => {
-    return new Promise((resolve, reject) => {
+/** Get natural dimensions of an image file. */
+export const getImageDimensions = (file) =>
+    new Promise((resolve, reject) => {
         const url = URL.createObjectURL(file);
         const img = new Image();
         img.onload = () => {
@@ -244,11 +268,8 @@ export const getImageDimensions = (file) => {
         };
         img.src = url;
     });
-};
 
-/**
- * Format bytes to human-readable string.
- */
+/** Format bytes → human-readable string. */
 export const formatSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
