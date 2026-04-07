@@ -23,7 +23,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
             className="flex items-center gap-3 group cursor-default shrink-0"
           >
             <div className="p-2.5 glass group-hover:scale-110 transition-transform duration-300">
-              <Sparkles className="text-emerald-400 group-hover:text-emerald-300" size={22} />
+              <img className='h-8' src="/Pic Shift Logo.png" alt="PicShift" />
             </div>
             <h1 className="text-2xl font-extrabold gradient-text tracking-tight font-display">PicShift</h1>
           </motion.div>
