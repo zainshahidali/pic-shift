@@ -22,7 +22,7 @@ const SIZE_PRESETS = [
 
 export default function ImageConverter() {
   const [items, setItems] = useState([]);
-  const [quality, setQuality] = useState(100);
+  const [quality, setQuality] = useState(80);
   const [maxDimension, setMaxDimension] = useState(0);
   const [outputFormat, setOutputFormat] = useState('image/webp');
   const [isDragging, setIsDragging] = useState(false);
@@ -133,7 +133,7 @@ export default function ImageConverter() {
           <div className="flex flex-col">
             <label>Quality</label>
             <span className="text-sm font-semibold text-emerald-300">
-              {quality === 100 ? 'Original' : quality + '%'}
+              {quality === 100 ? 'Max' : quality === 80 ? 'Optimal' : quality + '%'}
             </span>
           </div>
           <input

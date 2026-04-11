@@ -194,7 +194,7 @@ const getExtension = (mime) => EXT_MAP[mime] || '.png';
  * @param {number} quality       1–100 (only affects JPEG / WebP)
  * @param {number} maxDimension  constrain longest edge (0 = original size)
  */
-export const convertImageFormat = async (file, targetFormat, quality = 100, maxDimension = 0) => {
+export const convertImageFormat = async (file, targetFormat, quality = 80, maxDimension = 0) => {
     const img = await loadImage(file);
 
     let w = img.naturalWidth;
@@ -246,8 +246,8 @@ export const resizeImage = async (file, width, height, maintainAspect = true) =>
         `_${targetW}x${targetH}` +
         getExtension(outputType);
 
-    // Max quality — user controls size via dimensions, not lossy compression
-    return canvasToFile(canvas, newName, outputType, 1.0);
+    // Optimal quality (85%) to prevent file size bloat when resizing, matching Cloudinary default
+    return canvasToFile(canvas, newName, outputType, 0.85);
 };
 
 
