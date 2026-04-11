@@ -1,8 +1,16 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Download, Trash2, Loader2, X, CheckCircle, Zap, DownloadCloud, Lock, Unlock, Maximize } from 'lucide-react';
+import { Upload, Download, Trash2, Loader2, X, CheckCircle, Zap, DownloadCloud, Lock, Unlock, Maximize, ArrowLeftRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { resizeImage, getImageDimensions, formatSize } from '../utils/imageProcessor';
 import JSZip from 'jszip';
+
+const OUTPUT_FORMATS = [
+  { value: 'original', label: 'Keep Original' },
+  { value: 'image/webp', label: 'WebP' },
+  { value: 'image/jpeg', label: 'JPEG' },
+  { value: 'image/png', label: 'PNG' },
+  { value: 'image/bmp', label: 'BMP' },
+];
 
 const PRESETS = [
   { label: '1920 × 1080', w: 1920, h: 1080 },
@@ -19,6 +27,7 @@ export default function ImageResizer() {
   const [targetWidth, setTargetWidth] = useState(1920);
   const [targetHeight, setTargetHeight] = useState(1080);
   const [lockAspect, setLockAspect] = useState(true);
+  const [outputFormat, setOutputFormat] = useState('original');
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -83,7 +92,8 @@ export default function ImageResizer() {
   const resizeFile = async (item) => {
     setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'resizing' } : i));
     try {
-      const resized = await resizeImage(item.originalFile, targetWidth, targetHeight, lockAspect);
+      const targetFormat = outputFormat === 'original' ? null : outputFormat;
+      const resized = await resizeImage(item.originalFile, targetWidth, targetHeight, lockAspect, targetFormat);
       const dims = await getImageDimensions(resized);
       setItems(prev => prev.map(i => i.id === item.id ? {
         ...i,
@@ -140,6 +150,18 @@ export default function ImageResizer() {
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-wrap items-center justify-center gap-3 mb-6"
       >
+        <div className="option-pill">
+          <ArrowLeftRight size={16} className="text-slate-400" />
+          <div className="flex flex-col">
+            <label>Output Format</label>
+            <select value={outputFormat} onChange={(e) => setOutputFormat(e.target.value)}>
+              {OUTPUT_FORMATS.map(f => (
+                <option key={f.value} value={f.value}>{f.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <div className="option-pill">
           <Maximize size={16} className="text-slate-400" />
           <div className="flex flex-col">

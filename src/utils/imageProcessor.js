@@ -219,14 +219,15 @@ export const convertImageFormat = async (file, targetFormat, quality = 80, maxDi
 };
 
 /**
- * Resize an image to exact dimensions.
+ * Resize an image to exact dimensions and optionally convert format.
  *
  * @param {File}    file
  * @param {number}  width           target width  (px)
  * @param {number}  height          target height (px)
  * @param {boolean} maintainAspect  fit inside w×h keeping ratio
+ * @param {string}  outputFormat    target format e.g. 'image/webp'. falsy to keep original format.
  */
-export const resizeImage = async (file, width, height, maintainAspect = true) => {
+export const resizeImage = async (file, width, height, maintainAspect = true, outputFormat = null) => {
     const img = await loadImage(file);
 
     let targetW = width;
@@ -240,14 +241,14 @@ export const resizeImage = async (file, width, height, maintainAspect = true) =>
 
     const canvas = await highQualityResize(file, img, targetW, targetH);
 
-    const outputType = file.type || 'image/png';
+    const finalOutputType = outputFormat || file.type || 'image/png';
     const newName =
         file.name.replace(/\.[^/.]+$/, '') +
         `_${targetW}x${targetH}` +
-        getExtension(outputType);
+        getExtension(finalOutputType);
 
     // Optimal quality (85%) to prevent file size bloat when resizing, matching Cloudinary default
-    return canvasToFile(canvas, newName, outputType, 0.85);
+    return canvasToFile(canvas, newName, finalOutputType, 0.85);
 };
 
 
