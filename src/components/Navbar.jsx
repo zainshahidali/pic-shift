@@ -20,7 +20,8 @@ export default function Navbar({ activeTab, setActiveTab }) {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-3 group cursor-default shrink-0"
+            onClick={() => setActiveTab("converter")}
+            className="flex items-center gap-3 group cursor-pointer shrink-0"
           >
             <div className="p-2.5 glass group-hover:scale-110 transition-transform duration-300">
               <img className='h-8' src="/Pic Shift Logo.png" alt="PicShift" />
