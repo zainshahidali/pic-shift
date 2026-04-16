@@ -37,7 +37,7 @@ export default function Home() {
           <button onClick={() => setActiveTab('privacy')} className="hover:text-emerald-400 transition-colors cursor-pointer">Privacy</button>
           <button onClick={() => setActiveTab('terms')} className="hover:text-teal-400 transition-colors cursor-pointer">Terms</button>
         </div>
-        <p className="font-medium">© 2026 PicShift | All Rights Reserved </p>
+        <p className="font-medium">© 2026 PicShift | All Rights Reserved. </p>
       </footer>
     </>
   );
