@@ -3,6 +3,7 @@ import { Upload, Download, Trash2, Loader2, X, CheckCircle, Zap, DownloadCloud, 
 import { motion, AnimatePresence } from 'framer-motion';
 import { resizeImage, getImageDimensions, formatSize } from '../utils/imageProcessor';
 import JSZip from 'jszip';
+import CustomDropdown from './CustomDropdown';
 
 const OUTPUT_FORMATS = [
   { value: 'original', label: 'Keep Original' },
@@ -152,13 +153,9 @@ export default function ImageResizer() {
       >
         <div className="option-pill">
           <ArrowLeftRight size={16} className="text-slate-400" />
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-[100px]">
             <label>Output Format</label>
-            <select value={outputFormat} onChange={(e) => setOutputFormat(e.target.value)}>
-              {OUTPUT_FORMATS.map(f => (
-                <option key={f.value} value={f.value}>{f.label}</option>
-              ))}
-            </select>
+            <CustomDropdown value={outputFormat} onChange={setOutputFormat} options={OUTPUT_FORMATS} />
           </div>
         </div>
 

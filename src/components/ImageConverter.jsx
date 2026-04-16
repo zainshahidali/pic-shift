@@ -3,6 +3,7 @@ import { Settings, Image as ImageIcon, Download, Upload, Trash2, CheckCircle, Za
 import { motion, AnimatePresence } from 'framer-motion';
 import { convertImageFormat, formatSize } from '../utils/imageProcessor';
 import JSZip from 'jszip';
+import CustomDropdown from './CustomDropdown';
 
 const OUTPUT_FORMATS = [
   { value: 'image/webp', label: 'WebP', ext: '.webp' },
@@ -118,13 +119,9 @@ export default function ImageConverter() {
       >
         <div className="option-pill">
           <ArrowLeftRight size={16} className="text-slate-400" />
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-[100px]">
             <label>Output Format</label>
-            <select value={outputFormat} onChange={(e) => setOutputFormat(e.target.value)}>
-              {OUTPUT_FORMATS.map(f => (
-                <option key={f.value} value={f.value}>{f.label}</option>
-              ))}
-            </select>
+            <CustomDropdown value={outputFormat} onChange={setOutputFormat} options={OUTPUT_FORMATS} />
           </div>
         </div>
 
@@ -145,13 +142,9 @@ export default function ImageConverter() {
 
         <div className="option-pill">
           <ImageIcon size={16} className="text-slate-400" />
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-[100px]">
             <label>Max Size</label>
-            <select value={maxDimension} onChange={(e) => setMaxDimension(Number(e.target.value))}>
-              {SIZE_PRESETS.map(s => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
-            </select>
+            <CustomDropdown value={maxDimension} onChange={setMaxDimension} options={SIZE_PRESETS} />
           </div>
         </div>
 
