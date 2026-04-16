@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
-import Navbar from './components/Navbar';
-import ImageConverter from './components/ImageConverter';
-import ImageResizer from './components/ImageResizer';
-import ImageToPdf from './components/ImageToPdf';
-import ImageToWord from './components/ImageToWord';
-import PrivacyPolicy from './components/PrivacyPolicy';
-import TermsOfService from './components/TermsOfService';
+'use client';
 
-function App() {
+import React, { useState } from 'react';
+import Navbar from '../components/Navbar';
+import ImageConverter from '../components/ImageConverter';
+import ImageResizer from '../components/ImageResizer';
+import ImageToPdf from '../components/ImageToPdf';
+import ImageToWord from '../components/ImageToWord';
+import PrivacyPolicy from '../components/PrivacyPolicy';
+import TermsOfService from '../components/TermsOfService';
+
+export default function Home() {
   const [activeTab, setActiveTab] = useState('converter');
 
   const renderTool = () => {
@@ -23,11 +25,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Background Ornaments */}
-      <div className="fixed top-[-10%] left-[-5%] w-[45%] h-[45%] bg-emerald-600/10 blur-[130px] rounded-full -z-10 animate-pulse"></div>
-      <div className="fixed bottom-[-5%] right-[-5%] w-[40%] h-[40%] bg-cyan-600/10 blur-[130px] rounded-full -z-10"></div>
-
+    <>
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
 
       <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
@@ -41,8 +39,6 @@ function App() {
         </div>
         <p className="font-medium">© 2026 PicShift | All Rights Reserved </p>
       </footer>
-    </div>
+    </>
   );
 }
-
-export default App;

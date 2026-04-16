@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useRef } from 'react';
 import { Upload, Download, Trash2, Loader2, X, FileType, GripVertical } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
