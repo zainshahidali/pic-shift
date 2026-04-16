@@ -36,8 +36,8 @@ function App() {
 
       <footer className="w-full mt-auto pt-12 pb-8 border-t border-white/5 text-slate-600 text-xs flex flex-col items-center gap-4">
         <div className="flex gap-8 font-bold uppercase tracking-[0.2em]">
-          <button onClick={() => setActiveTab('privacy')} className="hover:text-emerald-400 transition-colors">Privacy</button>
-          <button onClick={() => setActiveTab('terms')} className="hover:text-teal-400 transition-colors">Terms</button>
+          <button onClick={() => setActiveTab('privacy')} className="hover:text-emerald-400 transition-colors cursor-pointer">Privacy</button>
+          <button onClick={() => setActiveTab('terms')} className="hover:text-teal-400 transition-colors cursor-pointer">Terms</button>
         </div>
         <p className="font-medium">© 2026 PicShift | All Rights Reserved </p>
       </footer>
