@@ -8,6 +8,7 @@ import ImageToPdf from '../components/ImageToPdf';
 import ImageToWord from '../components/ImageToWord';
 import PrivacyPolicy from '../components/PrivacyPolicy';
 import TermsOfService from '../components/TermsOfService';
+import InfoSections from '../components/InfoSections';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('converter');
@@ -30,6 +31,9 @@ export default function Home() {
 
       <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
         {renderTool()}
+        {activeTab !== 'privacy' && activeTab !== 'terms' && (
+          <InfoSections />
+        )}
       </main>
 
       <footer className="w-full mt-auto pt-12 pb-8 border-t border-white/5 text-slate-600 text-xs flex flex-col items-center gap-4">
