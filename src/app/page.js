@@ -9,6 +9,7 @@ import ImageToWord from '../components/ImageToWord';
 import PrivacyPolicy from '../components/PrivacyPolicy';
 import TermsOfService from '../components/TermsOfService';
 import InfoSections from '../components/InfoSections';
+import GeoTagging from '../components/GeoTagging';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('converter');
@@ -17,6 +18,7 @@ export default function Home() {
     switch (activeTab) {
       case 'converter': return <ImageConverter />;
       case 'resizer': return <ImageResizer />;
+      case 'geotag': return <GeoTagging />;
       case 'pdf': return <ImageToPdf />;
       case 'word': return <ImageToWord />;
       case 'privacy': return <PrivacyPolicy />;

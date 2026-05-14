@@ -2,11 +2,12 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, ArrowLeftRight, Maximize, FileText, FileType, Menu, X } from 'lucide-react';
+import { Sparkles, ArrowLeftRight, Maximize, FileText, FileType, Menu, X, MapPin } from 'lucide-react';
 
 const tabs = [
   { id: 'converter', label: 'Image Converter', icon: ArrowLeftRight },
   { id: 'resizer', label: 'Image Resizer', icon: Maximize },
+  { id: 'geotag', label: 'Geo Tagging', icon: MapPin },
   { id: 'pdf', label: 'Image to PDF', icon: FileText },
   { id: 'word', label: 'Image to Word', icon: FileType },
 ];
