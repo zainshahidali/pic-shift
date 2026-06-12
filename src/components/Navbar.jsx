@@ -8,6 +8,7 @@ const tabs = [
   { id: 'converter', label: 'Image Converter', icon: ArrowLeftRight },
   { id: 'resizer', label: 'Image Resizer', icon: Maximize },
   { id: 'geotag', label: 'Geo Tagging', icon: MapPin },
+  { id: 'svg', label: 'Image to SVG', icon: Sparkles },
   { id: 'pdf', label: 'Image to PDF', icon: FileText },
   { id: 'word', label: 'Image to Word', icon: FileType },
 ];
